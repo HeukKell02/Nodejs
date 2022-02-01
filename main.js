@@ -1,11 +1,59 @@
 const express = require('express');
-const app = express();
+const app = express(); // express 는 함수 라는 의미
+const fs = require('fs');
+const template = require('./lib/template.js');
+const path = require('path');
+const sanitizeHtml = require('sanitize-html');
 
-app.get('/',(req,res)=>res.send("Hello World!"));
 
+/** route, routing 이라고 한다.
+ *  갈림길 방향을 설정하는것. path 에 따른 적당한 응답 
+ */
+app.get('/',(request,response)=>{
+  fs.readdir('./data', function(error, filelist){
+    var title = 'Welcome';
+    var description = 'Hello, Node.js';
+    var list = template.list(filelist);
+    var html = template.HTML(title, list,
+      `<h2>${title}</h2>${description}`,
+      `<a href="/create">create</a>`
+    );
+    response.send(html); // send 는 writeHead 와 end 를 대체합니다.
+  });
+});
+//app.get('/',(request,response)=>response.send("um.."));
+
+app.get('/page/:pageID',(request,response)=>{
+  fs.readdir('./data', function(error, filelist){
+    var filteredId = path.parse(request.params.pageID).base;
+    fs.readFile(`data/${filteredId}`, 'utf8', function(err, description){
+      var title = request.params.pageID;
+      var sanitizedTitle = sanitizeHtml(title);
+      var sanitizedDescription = sanitizeHtml(description, {
+        allowedTags:['h1']
+      });
+      var list = template.list(filelist);
+      var html = template.HTML(sanitizedTitle, list,
+        `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
+        ` <a href="/create">create</a>
+          <a href="/update?id=${sanitizedTitle}">update</a>
+          <form action="delete_process" method="post">
+            <input type="hidden" name="id" value="${sanitizedTitle}">
+            <input type="submit" value="delete">
+          </form>`
+      );
+      response.send(html);
+    });
+  });
+});
+
+/** listen 이라는 함수가 실행될때, 웹서버가 구동하게 되고, 3000 번 port 에서 요청을 기다리게 된다.
+ * 또한 2번째 인수로 전달된 콜백함수를 호출합니다.
+ */
 app.listen(3000,()=>console.log('Example app listening on port 3000! '));
 
-/*var http = require('http');
+/* 이전 코드
+var http = require('http');
 var fs = require('fs');
 var url = require('url');
 var qs = require('querystring');
