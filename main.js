@@ -4,7 +4,8 @@ const fs = require('fs');
 const template = require('./lib/template.js');
 const path = require('path');
 const sanitizeHtml = require('sanitize-html');
-
+const { response } = require('express');
+const qs = require('querystring');
 
 /** route, routing 이라고 한다.
  *  갈림길 방향을 설정하는것. path 에 따른 적당한 응답 
@@ -47,6 +48,44 @@ app.get('/page/:pageID',(request,response)=>{
   });
 });
 
+
+app.get('/create',(request,response)=>{
+  fs.readdir('./data', function(error, filelist){
+    var title = 'WEB - create';
+    var list = template.list(filelist);
+    var html = template.HTML(title, list, `
+      <form action="/create_process" method="post">
+        <p><input type="text" name="title" placeholder="title"></p>
+        <p>
+          <textarea name="description" placeholder="description"></textarea>
+        </p>
+        <p>
+          <input type="submit">
+        </p>
+      </form>
+    `, '');
+    response.send(html);
+  });
+});
+
+app.post('/create_process',(request,response)=>{
+  var body = '';
+  request.on('data', function(data)
+  {
+    body = body + data;
+  });
+  request.on('end', function()
+  {
+    var post = qs.parse(body);
+    var title = post.title;
+    var description = post.description;
+    fs.writeFile(`data/${title}`, description, 'utf8', function(err){
+      response.writeHead(302, {Location: `/?id=${title}`});
+    response.end();
+    })
+
+  });
+});
 /** listen 이라는 함수가 실행될때, 웹서버가 구동하게 되고, 3000 번 port 에서 요청을 기다리게 된다.
  * 또한 2번째 인수로 전달된 콜백함수를 호출합니다.
  */
