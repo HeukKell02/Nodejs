@@ -6,6 +6,7 @@ const path = require('path');
 const sanitizeHtml = require('sanitize-html');
 const { response } = require('express');
 const qs = require('querystring');
+const res = require('express/lib/response');
 
 /** route, routing 이라고 한다.
  *  갈림길 방향을 설정하는것. path 에 따른 적당한 응답 
@@ -38,7 +39,7 @@ app.get('/page/:pageID',(request,response)=>{
         `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
         ` <a href="/create">create</a>
           <a href="/update/${sanitizedTitle}">update</a>
-          <form action="delete_process" method="post">
+          <form action="/delete_process" method="post">
             <input type="hidden" name="id" value="${sanitizedTitle}">
             <input type="submit" value="delete">
           </form>`
@@ -125,12 +126,35 @@ app.post('/update_process',(request,response)=>{
     var description = post.description;
     fs.rename(`data/${id}`,`data/${title}`,function(error){
       fs.writeFile(`data/${title}`,description,'utf8',function(err){
-        response.writeHead(302,{Location:`/?id=${title}`});
+        response.writeHead(302,{Location:`/page/${title}`});
         response.end();
       })
     })
 
   })
+})
+
+app.post('/delete_process',(request,response)=>{
+  var body ='';
+
+  request.on('data',(data)=>{
+    body+=data;
+  })
+  request.on('end',(err)=>{
+    //body 에는 {id} 가 있을것이다.
+    var post = qs.parse(body); // 데이터 분석 후 저장
+    var id = post.id; // 제목 들고옴
+    //var filteredId = path.parse(id).base; //왜쓰는지 모르겠다.
+    fs.unlink(`data/${id}`,(err)=>{
+      if(err){/*에러처리 */}
+      
+      response.writeHead(302,{Location:'/'});
+      response.end(); // 페이지 삭제 까지 완료 --------------------------------------------------------------------------3시 12 분
+    })
+
+    
+  })
+  
 })
 
 /** listen 이라는 함수가 실행될때, 웹서버가 구동하게 되고, 3000 번 port 에서 요청을 기다리게 된다.
